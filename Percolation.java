@@ -4,7 +4,7 @@ public class Percolation {
     private WeightedQuickUnionUF arr;
     private boolean[][] sites;
     private int openCount = 0;
-    private final int top, max;
+    private final int top, bottom, max;
 
     // constructor; creates n-by-n grid, with all sites initially blocked
     public Percolation(int n) {
@@ -12,9 +12,10 @@ public class Percolation {
             throw new IllegalArgumentException("N <= 0");
         // imaginary top row = 0
         top = 0;
+        bottom = (n * n) + 1;
         max = n;
-        arr = new WeightedQuickUnionUF((n * n) + 1); // +1 for the top
-        sites = new boolean[n + 1][n + 1]; // col=0 is extra
+        arr = new WeightedQuickUnionUF((n * n) + 2); // +2 for the top and bottom
+        sites = new boolean[n + 2][n + 1]; // col=0 is extra, row = 0 is top, row = n+1 is bottom
     }
     // opens the site (row, col) if it is not open already
     public void open(int row, int col) {
@@ -27,16 +28,19 @@ public class Percolation {
     }
     // checks if there are adjacent nodes open and connects them to the newly open node
     private void connectAdjacent(int row, int col) {
+        int node = toArr(row, col);
         // 1) Connect above node
-        if (row != 1 && isOpen(row - 1, col)) arr.union(toArr(row, col), toArr(row - 1, col));
+        if (row != 1 && isOpen(row - 1, col)) arr.union(node, toArr(row - 1, col));
         // 2) Connect left node
-        if (col != 1 && isOpen(row, col - 1)) arr.union(toArr(row, col), toArr(row, col - 1));
+        if (col != 1 && isOpen(row, col - 1)) arr.union(node, toArr(row, col - 1));
         // 3) Connect right node
-        if (col != max && isOpen(row, col + 1)) arr.union(toArr(row, col), toArr(row, col + 1));
+        if (col != max && isOpen(row, col + 1)) arr.union(node, toArr(row, col + 1));
         // 4) Connect below node
-        if (row != max && isOpen(row + 1, col)) arr.union(toArr(row, col), toArr(row + 1, col));
+        if (row != max && isOpen(row + 1, col)) arr.union(node, toArr(row + 1, col));
         // 5) Conect to the top node arr[0]
-        if (row == 1) arr.union(toArr(row, col), 0);
+        if (row == 1) arr.union(node, top);
+        // 6) Connect to the bottom node arr[max+1];
+        if (row == max) arr.union(node, bottom);
     }
     // is the site (row, col) open?
     public boolean isOpen(int row, int col) {
@@ -47,7 +51,7 @@ public class Percolation {
     public boolean isFull(int row, int col) {
         inRange(row, col); // make sure within the grid
         if (isOpen(row, col)){
-            return arr.connected(0,toArr(row, col));
+            return arr.connected(top, toArr(row, col));
         }
         return false;
     }
@@ -57,15 +61,7 @@ public class Percolation {
     }
     // does the system percolate?
     public boolean percolates() {
-        // go through each node at the last level and check if connected to top at any one
-        for (int i = 1; i < max + 1; i++) {// max = n;
-            if (isOpen(max, i)) {
-                if (arr.connected(0, toArr(max, i))) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return arr.connected(top, bottom);
     }
     // error check
     private void inRange(int row, int col) {
